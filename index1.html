@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Thống kê từ Google Sheet</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h2>📊 Thống kê từ Google Sheet</h2>
+  <canvas id="myChart" width="400" height="200"></canvas>
+
+  <script>
+    const apiUrl = "https://script.google.com/macros/s/AKfycbypd_qY6qk0-z7U2hgJ2w7r1VK2-5lgyjXkBgFbd62LkOYjltpau4_UBL7_AsBcJ1oH2w/exec"; // Dán link Apps Script vào đây
+
+    fetch(apiUrl)
+      .then(response => response.json())
+      .then(data => {
+        const labels = data.slice(1).map(row => row[0]); // Cột 1 là nhãn
+        const values = data.slice(1).map(row => row[1]); // Cột 2 là giá trị
+
+        new Chart(document.getElementById("myChart"), {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Doanh thu',
+              data: values,
+              backgroundColor: 'rgba(54, 162, 235, 0.6)'
+            }]
+          }
+        });
+      })
+      .catch(error => console.error('Lỗi khi tải dữ liệu:', error));
+  </script>
+</body>
+</html>
