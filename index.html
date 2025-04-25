@@ -1,35 +1,122 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <title>Thống kê từ Google Sheet</title>
+  <meta charset="UTF-8">
+  <title>Dashboard Sản Xuất</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    h1 { text-align: center; }
+    .chart-container { width: 90%; margin: 40px auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  </style>
 </head>
 <body>
-  <h2>📊 Thống kê từ Google Sheet</h2>
-  <canvas id="myChart" width="400" height="200"></canvas>
+  <h1>📊 Dashboard Sản Xuất</h1>
+
+  <div class="chart-container">
+    <h2>Gauges (PT/ED, PVC, PAINT, IN PBS)</h2>
+    <canvas id="gaugeChart"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <h2>DPU Chart</h2>
+    <canvas id="dpuChart"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <h2>Downtime</h2>
+    <canvas id="downtimeChart"></canvas>
+  </div>
+
+  <div class="chart-container">
+    <h2>First Time Through (FTT)</h2>
+    <canvas id="fttChart"></canvas>
+  </div>
 
   <script>
-    const apiUrl = "https://script.google.com/macros/s/AKfycbypd_qY6qk0-z7U2hgJ2w7r1VK2-5lgyjXkBgFbd62LkOYjltpau4_UBL7_AsBcJ1oH2w/exec"; // Dán link Apps Script vào đây
+    const apiBase = "https://script.google.com/macros/s/AKfycbx5YXjZcD--k19vRLvj4EBav-DW3zHc_zmxdKsSKWwJRkmXyImPb0A1cWVexmYS8Luo/exec";
 
-    fetch(apiUrl)
-      .then(response => response.json())
-      .then(data => {
-        const labels = data.slice(1).map(row => row[0]); // Cột 1 là nhãn
-        const values = data.slice(1).map(row => row[1]); // Cột 2 là giá trị
+    // Gauges
+    fetch(`${apiBase}?sheet=Gauges`).then(r => r.text()).then(json => {
+      const data = JSON.parse(json);
+      const labels = [], actual = [], target = [];
+      for (let i = 1; i < data.length; i++) {
+        labels.push(data[i][0]);
+        target.push(data[i][1]);
+        actual.push(data[i][2]);
+      }
+      new Chart(document.getElementById("gaugeChart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "Actual", data: actual, backgroundColor: "rgba(54,162,235,0.7)" },
+            { label: "Target", data: target, backgroundColor: "rgba(255,99,132,0.7)" }
+          ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+    });
 
-        new Chart(document.getElementById("myChart"), {
-          type: 'bar',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: 'Doanh thu',
-              data: values,
-              backgroundColor: 'rgba(54, 162, 235, 0.6)'
-            }]
-          }
-        });
-      })
-      .catch(error => console.error('Lỗi khi tải dữ liệu:', error));
+    // DPU
+    fetch(`${apiBase}?sheet=DPU`).then(r => r.text()).then(json => {
+      const data = JSON.parse(json);
+      const labels = data.slice(1).map(r => r[0]);
+      const names = ["BMW", "MAZDA", "PEUGEOT", "TARGET"];
+      const datasets = names.map((name, i) => ({
+        label: name,
+        data: data.slice(1).map(r => r[i+1]),
+        borderWidth: 2,
+        fill: false
+      }));
+      new Chart(document.getElementById("dpuChart"), {
+        type: "line",
+        data: { labels, datasets },
+        options: { responsive: true }
+      });
+    });
+
+    // Downtime
+    fetch(`${apiBase}?sheet=DownTime`).then(r => r.text()).then(json => {
+      const data = JSON.parse(json);
+      const labels = data.slice(1).map(r => r[0]);
+      const d1 = data.slice(1).map(r => r[1]);
+      const d2 = data.slice(1).map(r => r[2]);
+      new Chart(document.getElementById("downtimeChart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "Polishing 2", data: d1, backgroundColor: "rgba(255,206,86,0.6)" },
+            { label: "Polishing 3", data: d2, backgroundColor: "rgba(75,192,192,0.6)" }
+          ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+    });
+
+    // FTT
+    fetch(`${apiBase}?sheet=FTT`).then(r => r.text()).then(json => {
+      const data = JSON.parse(json);
+      const labels = data.slice(1).map(r => r[0]);
+      const okMazda = data.slice(1).map(r => parseFloat(r[1]) || 0);
+      const repairMazda = data.slice(1).map(r => parseFloat(r[2]) || 0);
+      new Chart(document.getElementById("fttChart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            { label: "OK MAZDA (%)", data: okMazda, backgroundColor: "rgba(75,192,192,0.6)" },
+            { label: "REPAIR MAZDA (%)", data: repairMazda, backgroundColor: "rgba(255,99,132,0.6)" }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { tooltip: { mode: 'index', intersect: false } },
+          scales: { y: { beginAtZero: true, max: 100 }, x: { stacked: true } }
+        }
+      });
+    });
   </script>
 </body>
 </html>
